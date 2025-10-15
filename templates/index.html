@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Manager - Панель управления</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .status-online {
+            color: #10b981;
+        }
+        .status-offline {
+            color: #ef4444;
+        }
+        .battery-low {
+            color: #ef4444;
+        }
+        .battery-medium {
+            color: #f59e0b;
+        }
+        .battery-high {
+            color: #10b981;
+        }
+        .device-offline {
+            background-color: #374151 !important;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <h1 class="text-3xl font-bold text-white">📱 Device Manager</h1>
+            <p class="text-gray-400 mt-1">Панель управления Android устройствами</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Loading Spinner -->
+        <div id="loading" class="flex justify-center items-center py-20">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden bg-red-900 border border-red-700 text-red-100 px-6 py-4 rounded-lg mb-6">
+            <p class="font-bold">❌ Ошибка загрузки данных</p>
+            <p id="error-message" class="text-sm mt-1"></p>
+        </div>
+
+        <!-- Stats -->
+        <div id="stats" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-600 bg-opacity-20">
+                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-400 text-sm">Всего устройств</p>
+                        <p id="total-devices" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-600 bg-opacity-20">
+                        <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-400 text-sm">Онлайн</p>
+                        <p id="online-devices" class="text-2xl font-bold text-green-400">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 shadow-lg">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-600 bg-opacity-20">
+                        <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-400 text-sm">Оффлайн</p>
+                        <p id="offline-devices" class="text-2xl font-bold text-red-400">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Devices Table -->
+        <div id="devices-container" class="hidden bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h2 class="text-xl font-semibold text-white">Список устройств</h2>
+                <p class="text-gray-400 text-sm mt-1">Обновление каждые 10 секунд</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Статус</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Имя</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Заряд</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Сигнал</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Сеть</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Интернет</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Последнее обновление</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-table" class="divide-y divide-gray-700">
+                        <!-- Devices will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- No Devices Message -->
+        <div id="no-devices" class="hidden bg-gray-800 rounded-lg p-12 text-center">
+            <svg class="w-20 h-20 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-400 mb-2">Нет устройств</h3>
+            <p class="text-gray-500">Ожидание подключения устройств...</p>
+        </div>
+    </main>
+
+    <script>
+        let updateInterval;
+
+        // Часовой пояс Казахстана (UTC+5)
+        const KAZAKHSTAN_OFFSET = 5 * 60; // минуты
+
+        // Функция для парсинга даты в формате "DD.MM.YYYY HH:MM:SS"
+        function parseCustomDate(timestamp) {
+            if (!timestamp) return null;
+            
+            // Проверяем формат "DD.MM.YYYY HH:MM:SS"
+            const match = timestamp.match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+            if (match) {
+                const [, day, month, year, hour, minute, second] = match;
+                // Создаем дату как время Казахстана
+                const date = new Date(year, month - 1, day, hour, minute, second);
+                // Корректируем на разницу между локальным временем и Казахстаном
+                const localOffset = date.getTimezoneOffset();
+                const kazakhstanOffset = -KAZAKHSTAN_OFFSET; // UTC+5
+                const offsetDiff = kazakhstanOffset - localOffset;
+                date.setMinutes(date.getMinutes() + offsetDiff);
+                return date;
+            }
+            
+            // Пробуем стандартный формат
+            return new Date(timestamp);
+        }
+
+        // Функция для форматирования времени относительно текущего момента
+        function formatTime(timestamp) {
+            if (!timestamp) return 'Неизвестно';
+            try {
+                const date = parseCustomDate(timestamp);
+                if (!date || isNaN(date.getTime())) return timestamp;
+                
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000); // разница в секундах
+                const minutes = Math.floor(diff / 60);
+                const hours = Math.floor(diff / 3600);
+                const days = Math.floor(diff / 86400);
+
+                if (diff < 60) return 'только что';
+                if (minutes < 60) return `${minutes} мин. назад`;
+                if (hours < 24) return `${hours} ч. назад`;
+                if (days < 7) return `${days} дн. назад`;
+                
+                // Если больше недели, показываем конкретную дату
+                return date.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return timestamp;
+            }
+        }
+
+        // Функция для получения класса батареи
+        function getBatteryClass(battery) {
+            if (battery < 20) return 'battery-low';
+            if (battery < 50) return 'battery-medium';
+            return 'battery-high';
+        }
+
+        // Функция для загрузки устройств
+        async function loadDevices() {
+            try {
+                const response = await fetch('/devices');
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayDevices(data.devices);
+                    updateStats(data.devices);
+                } else {
+                    showError('Ошибка загрузки данных');
+                }
+            } catch (error) {
+                showError('Не удалось подключиться к серверу: ' + error.message);
+            }
+        }
+
+        // Функция для отображения устройств
+        function displayDevices(devices) {
+            const loading = document.getElementById('loading');
+            const devicesContainer = document.getElementById('devices-container');
+            const noDevices = document.getElementById('no-devices');
+            const devicesTable = document.getElementById('devices-table');
+            const statsDiv = document.getElementById('stats');
+
+            loading.classList.add('hidden');
+            statsDiv.classList.remove('hidden');
+
+            if (devices.length === 0) {
+                devicesContainer.classList.add('hidden');
+                noDevices.classList.remove('hidden');
+                return;
+            }
+
+            noDevices.classList.add('hidden');
+            devicesContainer.classList.remove('hidden');
+
+            devicesTable.innerHTML = devices.map(device => {
+                const batteryClass = getBatteryClass(device.battery || 0);
+                const statusClass = device.online ? 'status-online' : 'status-offline';
+                const statusIcon = device.online ? '🟢' : '🔴';
+                const rowClass = device.online ? '' : 'device-offline';
+
+                return `
+                    <tr class="hover:bg-gray-700 cursor-pointer transition ${rowClass}" onclick="goToDevice('${device.id}')">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-2xl">${statusIcon}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-white">${device.name || 'Без имени'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-400">${device.id}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold ${batteryClass}">${device.battery || 0}%</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-300">${device.signal_strength || 0}%</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-900 text-blue-200">
+                                ${device.network_type || 'Unknown'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-900 text-purple-200">
+                                ${device.internet || 'Unknown'}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            ${formatTime(device.last_seen)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Функция для обновления статистики
+        function updateStats(devices) {
+            const total = devices.length;
+            const online = devices.filter(d => d.online).length;
+            const offline = total - online;
+
+            document.getElementById('total-devices').textContent = total;
+            document.getElementById('online-devices').textContent = online;
+            document.getElementById('offline-devices').textContent = offline;
+        }
+
+        // Функция для отображения ошибки
+        function showError(message) {
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+
+            loading.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+            errorMessage.textContent = message;
+        }
+
+        // Функция для перехода на страницу устройства
+        function goToDevice(deviceId) {
+            window.location.href = `/device-page/${deviceId}`;
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDevices();
+            
+            // Обновление каждые 10 секунд
+            updateInterval = setInterval(() => {
+                loadDevices();
+            }, 10000);
+        });
+
+        // Очистка интервала при выходе
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>
+

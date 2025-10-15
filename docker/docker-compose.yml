@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  device-manager:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: device-manager
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Монтируем директорию для базы данных (данные сохраняются при перезапуске)
+      - ../data:/app/data
+      # Конфигурация (можно редактировать без пересборки)
+      - ../config.env:/app/config.env
+    environment:
+      # Переопределяем путь к базе данных
+      - DATABASE_PATH=/app/data/devices.db
+      - PYTHONPATH=/app
+    networks:
+      - device-manager-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  device-manager-network:
+    driver: bridge
+

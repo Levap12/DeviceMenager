@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Manager - Устройство</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .battery-low {
+            color: #ef4444;
+        }
+        .battery-medium {
+            color: #f59e0b;
+        }
+        .battery-high {
+            color: #10b981;
+        }
+        
+        /* Стили для раскрывающихся SMS */
+        .sms-message {
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            cursor: pointer;
+            position: relative;
+        }
+        .sms-message.collapsed {
+            max-height: 4.5em;
+            line-height: 1.5em;
+        }
+        .sms-message.collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1.5em;
+            background: linear-gradient(to bottom, transparent, rgba(31, 41, 55, 1));
+            pointer-events: none;
+        }
+        .sms-message.expanded {
+            max-height: 2000px;
+            transition: max-height 0.5s ease-in;
+        }
+        .sms-message.expanded::after {
+            display: none;
+        }
+        .sms-message:hover {
+            opacity: 0.95;
+        }
+        .sms-clickable {
+            cursor: pointer;
+        }
+        .sms-clickable:hover {
+            background-color: rgba(55, 65, 81, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center">
+                <a href="/" class="text-gray-400 hover:text-white mr-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold text-white">📱 Информация об устройстве</h1>
+                    <p class="text-gray-400 mt-1" id="device-name">Загрузка...</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Loading Spinner -->
+        <div id="loading" class="flex justify-center items-center py-20">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden bg-red-900 border border-red-700 text-red-100 px-6 py-4 rounded-lg mb-6">
+            <p class="font-bold">❌ Ошибка загрузки данных</p>
+            <p id="error-message" class="text-sm mt-1"></p>
+        </div>
+
+        <!-- Device Info -->
+        <div id="device-info" class="hidden">
+            <!-- Device Status Card -->
+            <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-white mb-6 flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span id="status-icon" class="mr-3 text-3xl">🟢</span>
+                        <span id="device-title">Устройство</span>
+                    </div>
+                    <button 
+                        id="edit-name-btn"
+                        onclick="editDeviceName()" 
+                        class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+                        title="Изменить имя устройства"
+                    >
+                        ✏️ Изменить имя
+                    </button>
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Device ID -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">ID устройства</p>
+                        <p id="device-id" class="text-white text-lg font-mono">-</p>
+                    </div>
+
+                    <!-- Battery -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">Заряд батареи</p>
+                        <div class="flex items-center">
+                            <div class="flex-1 bg-gray-600 rounded-full h-4 mr-3">
+                                <div id="battery-bar" class="h-4 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <p id="battery-level" class="text-white text-lg font-semibold">0%</p>
+                        </div>
+                    </div>
+
+                    <!-- Signal Strength -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">Уровень сигнала</p>
+                        <p id="signal-strength" class="text-white text-lg font-semibold">-</p>
+                    </div>
+
+                    <!-- Network Type -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">Тип сети</p>
+                        <p id="network-type" class="text-white text-lg">-</p>
+                    </div>
+
+                    <!-- Internet -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">Интернет</p>
+                        <p id="internet" class="text-white text-lg">-</p>
+                    </div>
+
+                    <!-- Last Seen -->
+                    <div class="bg-gray-700 rounded-lg p-4">
+                        <p class="text-gray-400 text-sm mb-2">Последнее обновление</p>
+                        <p id="last-seen" class="text-white text-lg">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMS Section -->
+            <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-700">
+                    <h2 class="text-xl font-semibold text-white">SMS сообщения</h2>
+                    <p class="text-gray-400 text-sm mt-1">Всего: <span id="sms-count">0</span></p>
+                </div>
+
+                <!-- SMS Table -->
+                <div id="sms-container" class="overflow-x-auto">
+                    <table class="w-full table-fixed">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-32 md:w-40">Дата и время</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider w-24 md:w-32">Отправитель</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Сообщение</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sms-table" class="divide-y divide-gray-700">
+                            <!-- SMS will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- No SMS Message -->
+                <div id="no-sms" class="hidden p-12 text-center">
+                    <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-400 mb-2">Нет SMS</h3>
+                    <p class="text-gray-500">Это устройство пока не получало SMS сообщений</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let updateInterval;
+        let deviceId;
+        let currentDeviceName = '';
+
+        // Получаем ID устройства из URL
+        function getDeviceIdFromUrl() {
+            const path = window.location.pathname;
+            const parts = path.split('/');
+            return parts[parts.length - 1];
+        }
+
+        // Часовой пояс Казахстана (UTC+5)
+        const KAZAKHSTAN_OFFSET = 5 * 60; // минуты
+
+        // Функция для парсинга даты в формате "DD.MM.YYYY HH:MM:SS"
+        function parseCustomDate(timestamp) {
+            if (!timestamp) return null;
+            
+            // Проверяем формат "DD.MM.YYYY HH:MM:SS"
+            const match = timestamp.match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/);
+            if (match) {
+                const [, day, month, year, hour, minute, second] = match;
+                // Создаем дату как время Казахстана
+                const date = new Date(year, month - 1, day, hour, minute, second);
+                // Корректируем на разницу между локальным временем и Казахстаном
+                const localOffset = date.getTimezoneOffset();
+                const kazakhstanOffset = -KAZAKHSTAN_OFFSET; // UTC+5
+                const offsetDiff = kazakhstanOffset - localOffset;
+                date.setMinutes(date.getMinutes() + offsetDiff);
+                return date;
+            }
+            
+            // Пробуем стандартный формат
+            return new Date(timestamp);
+        }
+
+        // Функция для форматирования времени
+        function formatTime(timestamp) {
+            if (!timestamp) return 'Неизвестно';
+            try {
+                const date = parseCustomDate(timestamp);
+                if (!date || isNaN(date.getTime())) return timestamp;
+                
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000);
+                const minutes = Math.floor(diff / 60);
+                const hours = Math.floor(diff / 3600);
+                const days = Math.floor(diff / 86400);
+
+                if (diff < 60) return 'только что';
+                if (minutes < 60) return `${minutes} мин. назад`;
+                if (hours < 24) return `${hours} ч. назад`;
+                if (days < 7) return `${days} дн. назад`;
+                
+                return date.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return timestamp;
+            }
+        }
+
+        // Функция для получения класса батареи
+        function getBatteryClass(battery) {
+            if (battery < 20) return 'bg-red-500';
+            if (battery < 50) return 'bg-yellow-500';
+            return 'bg-green-500';
+        }
+
+        // Функция для загрузки информации об устройстве
+        async function loadDeviceInfo() {
+            try {
+                const response = await fetch(`/device/${deviceId}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayDeviceInfo(data.device);
+                } else {
+                    showError('Ошибка загрузки данных устройства');
+                }
+            } catch (error) {
+                showError('Не удалось подключиться к серверу: ' + error.message);
+            }
+        }
+
+        // Функция для загрузки SMS
+        async function loadSMS() {
+            try {
+                const response = await fetch(`/device/${deviceId}/sms`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displaySMS(data.sms);
+                } else {
+                    showError('Ошибка загрузки SMS');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки SMS:', error);
+            }
+        }
+
+        // Функция для отображения информации об устройстве
+        function displayDeviceInfo(device) {
+            const loading = document.getElementById('loading');
+            const deviceInfo = document.getElementById('device-info');
+
+            loading.classList.add('hidden');
+            deviceInfo.classList.remove('hidden');
+
+            // Обновляем заголовок
+            currentDeviceName = device.name || 'Без имени';
+            document.getElementById('device-name').textContent = currentDeviceName;
+            document.getElementById('device-title').textContent = currentDeviceName;
+
+            // Статус
+            const statusIcon = document.getElementById('status-icon');
+            statusIcon.textContent = device.online ? '🟢' : '🔴';
+
+            // ID
+            document.getElementById('device-id').textContent = device.id;
+
+            // Батарея
+            const battery = device.battery || 0;
+            const batteryBar = document.getElementById('battery-bar');
+            const batteryLevel = document.getElementById('battery-level');
+            batteryBar.style.width = battery + '%';
+            batteryBar.className = 'h-4 rounded-full ' + getBatteryClass(battery);
+            batteryLevel.textContent = battery + '%';
+            batteryLevel.className = 'text-lg font-semibold ' + 
+                (battery < 20 ? 'battery-low' : battery < 50 ? 'battery-medium' : 'battery-high');
+
+            // Сигнал
+            document.getElementById('signal-strength').textContent = 
+                (device.signal_strength || 0) + '%';
+
+            // Тип сети
+            document.getElementById('network-type').textContent = 
+                device.network_type || 'Unknown';
+
+            // Интернет
+            document.getElementById('internet').textContent = 
+                device.internet || 'Unknown';
+
+            // Последнее обновление
+            document.getElementById('last-seen').textContent = 
+                formatTime(device.last_seen);
+        }
+
+        // Функция для переключения раскрытия SMS
+        function toggleSMS(index) {
+            const messageDiv = document.getElementById(`sms-message-${index}`);
+            
+            if (messageDiv.classList.contains('collapsed')) {
+                messageDiv.classList.remove('collapsed');
+                messageDiv.classList.add('expanded');
+            } else {
+                messageDiv.classList.remove('expanded');
+                messageDiv.classList.add('collapsed');
+            }
+        }
+
+        // Функция для отображения SMS
+        function displaySMS(smsList) {
+            const smsTable = document.getElementById('sms-table');
+            const smsContainer = document.getElementById('sms-container');
+            const noSms = document.getElementById('no-sms');
+            const smsCount = document.getElementById('sms-count');
+
+            smsCount.textContent = smsList.length;
+
+            if (smsList.length === 0) {
+                smsContainer.classList.add('hidden');
+                noSms.classList.remove('hidden');
+                return;
+            }
+
+            noSms.classList.add('hidden');
+            smsContainer.classList.remove('hidden');
+
+            smsTable.innerHTML = smsList.map((sms, index) => {
+                const message = sms.message || '';
+                const isLong = message.length > 200;
+                
+                return `
+                <tr class="hover:bg-gray-700 transition">
+                    <td class="px-4 py-4 text-xs md:text-sm text-gray-300 align-top">
+                        <div class="break-words">${formatTime(sms.timestamp)}</div>
+                    </td>
+                    <td class="px-4 py-4 align-top">
+                        <span class="px-2 py-1 text-xs md:text-sm font-semibold rounded-full bg-indigo-900 text-indigo-200 break-all">
+                            ${sms.sender || 'Unknown'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4 text-xs md:text-sm text-gray-300 align-top ${isLong ? 'sms-clickable' : ''}">
+                        ${isLong ? `
+                            <div id="sms-message-${index}" 
+                                 class="sms-message collapsed break-words whitespace-pre-wrap rounded p-2" 
+                                 onclick="toggleSMS(${index})"
+                                 title="Нажмите для раскрытия">
+                                ${message}
+                            </div>
+                        ` : `
+                            <div class="break-words whitespace-pre-wrap">${message}</div>
+                        `}
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+
+        // Функция для отображения ошибки
+        function showError(message) {
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+
+            loading.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+            errorMessage.textContent = message;
+        }
+
+        // Функция для редактирования имени устройства
+        async function editDeviceName() {
+            const newName = prompt('Введите новое имя устройства:', currentDeviceName);
+            
+            if (newName === null) {
+                // Пользователь отменил
+                return;
+            }
+            
+            if (!newName.trim()) {
+                alert('❌ Имя не может быть пустым');
+                return;
+            }
+            
+            if (newName.trim() === currentDeviceName) {
+                // Имя не изменилось
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/device/${deviceId}/name`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    // Обновляем отображение
+                    currentDeviceName = data.name;
+                    document.getElementById('device-name').textContent = data.name;
+                    document.getElementById('device-title').textContent = data.name;
+                    alert('✅ Имя устройства успешно обновлено!');
+                } else {
+                    alert('❌ Ошибка: ' + (data.detail || 'Не удалось обновить имя'));
+                }
+            } catch (error) {
+                console.error('Ошибка обновления имени:', error);
+                alert('❌ Ошибка соединения с сервером');
+            }
+        }
+
+        // Функция для загрузки всех данных
+        async function loadAllData() {
+            await loadDeviceInfo();
+            await loadSMS();
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            deviceId = getDeviceIdFromUrl();
+            loadAllData();
+            
+            // Обновление каждые 10 секунд
+            updateInterval = setInterval(() => {
+                loadAllData();
+            }, 10000);
+        });
+
+        // Очистка интервала при выходе
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>
+

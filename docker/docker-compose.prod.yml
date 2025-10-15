@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  device-manager:
+    build: .
+    container_name: device-manager-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - device-manager-data:/app/data
+      - ./config.env:/app/config.env:ro
+    environment:
+      - DATABASE_PATH=/app/data/devices.db
+      - PYTHONUNBUFFERED=1
+    networks:
+      - device-manager-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Опционально: Nginx для проксирования и SSL
+  nginx:
+    image: nginx:alpine
+    container_name: device-manager-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - device-manager
+    networks:
+      - device-manager-network
+
+volumes:
+  device-manager-data:
+    driver: local
+
+networks:
+  device-manager-network:
+    driver: bridge
+

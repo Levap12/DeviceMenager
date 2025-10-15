@@ -1,0 +1,73 @@
+# ===========================
+# Device Manager .gitignore
+# ===========================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Environment (содержит токены!)
+config.env
+.env
+.env.local
+!config.env.example
+
+# Backups
+backups/
+*.backup
+*.bak
+*.tmp
+
+# SSL certificates
+ssl/
+*.pem
+*.key
+*.crt
+
+# Test files
+test_*.py
+*_test.py
+pytest_cache/
+.pytest_cache/
+
+# Temporary files
+project_tree.txt
+
+# Docker volumes
+docker-volumes/
