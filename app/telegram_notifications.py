@@ -102,5 +102,10 @@ async def send_sms_notification_async(device_id: str, sender: str, message: str,
     """
     Асинхронная версия для использования внутри async контекста
     """
-    await _send_sms_notification_async(device_id, sender, message, timestamp)
+    try:
+        await _send_sms_notification_async(device_id, sender, message, timestamp)
+    except Exception as e:
+        print(f"❌ Ошибка в send_sms_notification_async: {e}")
+        import traceback
+        traceback.print_exc()
 

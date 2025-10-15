@@ -177,33 +177,41 @@ async def receive_event(event: Dict[str, Any]):
             update_device(device_id, update_data)
             
         elif event_type == "sms":
-            # Сохраняем SMS
-            sender = event.get('from', 'Unknown')
-            message = event.get('message', '')
-            print(f"   📨 SMS от {sender}: {message[:50]}...")
-            save_sms(device_id, timestamp, sender, message)
-            
-            # Отправляем уведомление в Telegram
             try:
-                await send_sms_notification_async(device_id, sender, message, timestamp)
-            except Exception as e:
-                print(f"   ⚠️ Ошибка отправки в Telegram: {e}")
-            
-            # Обновляем информацию об устройстве из SMS события
-            has_signal = device_data.get('hasSignal', False)
-            signal_strength_raw = device_data.get('signalStrength', 0)
-            signal_strength = int((signal_strength_raw / 4) * 100) if signal_strength_raw else 0
-            network_type = device_data.get('networkType', 'Unknown')
-            internet_connected = device_data.get('internetConnected', False)
-            
-            # Обновляем данные устройства (без имени, чтобы не перезаписать пользовательское)
-            update_device(device_id, {
-                'battery': battery,
-                'signal_strength': signal_strength,
-                'network_type': network_type,
-                'internet': 'Connected' if internet_connected else 'Disconnected',
-                'timestamp': timestamp
-            })
+                # Сохраняем SMS
+                sender = event.get('from', 'Unknown')
+                message = event.get('message', '')
+                print(f"   📨 SMS от {sender}: {message[:50]}...")
+                save_sms(device_id, timestamp, sender, message)
+                
+                # Отправляем уведомление в Telegram
+                try:
+                    await send_sms_notification_async(device_id, sender, message, timestamp)
+                except Exception as e:
+                    print(f"   ⚠️ Ошибка отправки в Telegram: {e}")
+                    import traceback
+                    traceback.print_exc()
+                
+                # Обновляем информацию об устройстве из SMS события
+                has_signal = device_data.get('hasSignal', False)
+                signal_strength_raw = device_data.get('signalStrength', 0)
+                signal_strength = int((signal_strength_raw / 4) * 100) if signal_strength_raw else 0
+                network_type = device_data.get('networkType', 'Unknown')
+                internet_connected = device_data.get('internetConnected', False)
+                
+                # Обновляем данные устройства (без имени, чтобы не перезаписать пользовательское)
+                update_device(device_id, {
+                    'battery': battery,
+                    'signal_strength': signal_strength,
+                    'network_type': network_type,
+                    'internet': 'Connected' if internet_connected else 'Disconnected',
+                    'timestamp': timestamp
+                })
+            except Exception as sms_error:
+                print(f"❌ Ошибка обработки SMS: {sms_error}")
+                import traceback
+                traceback.print_exc()
+                raise HTTPException(status_code=500, detail=f"Ошибка обработки SMS: {str(sms_error)}")
             
         elif event_type == "boot_completed":
             # Извлекаем данные о сети
