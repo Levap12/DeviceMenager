@@ -200,13 +200,17 @@ async def receive_event(event: Dict[str, Any]):
                 signal_strength = int((signal_strength_raw / 4) * 100) if signal_strength_raw else 0
                 network_type = device_data.get('networkType', 'Unknown')
                 internet_connected = device_data.get('internetConnected', False)
+                connection_type = device_data.get('connectionType', 'Unknown')
+                
+                # Определяем тип интернета как в device_status
+                internet_type = f"{connection_type}" if internet_connected else 'Disconnected'
                 
                 # Обновляем данные устройства (без имени, чтобы не перезаписать пользовательское)
                 update_device(device_id, {
                     'battery': battery,
                     'signal_strength': signal_strength,
                     'network_type': network_type,
-                    'internet': 'Connected' if internet_connected else 'Disconnected',
+                    'internet': internet_type,
                     'timestamp': timestamp
                 })
             except Exception as sms_error:
