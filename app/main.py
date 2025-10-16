@@ -145,19 +145,17 @@ async def receive_event(event: Dict[str, Any]):
         
         # Обрабатываем событие в зависимости от типа
         if event_type == "device_status":
-            # Извлекаем данные о сети
-            network_data = event.get('network', {})
-            internet_data = event.get('internet', {})
-            
-            # Преобразуем уровень сигнала (1-4) в проценты
-            signal_strength_raw = network_data.get('signalStrength', 0)
+            # Извлекаем данные о сети из device (новый формат)
+            signal_strength_raw = device_data.get('signalStrength', 0)
             signal_strength = int((signal_strength_raw / 4) * 100) if signal_strength_raw else 0
             
             # Получаем тип сети
-            network_type = network_data.get('networkType', 'Unknown')
+            network_type = device_data.get('networkType', 'Unknown')
             
             # Получаем тип интернета
-            internet_type = internet_data.get('type', 'Unknown')
+            internet_connected = device_data.get('internetConnected', False)
+            connection_type = device_data.get('connectionType', 'Unknown')
+            internet_type = f"{connection_type}" if internet_connected else 'Disconnected'
             
             # Проверяем, есть ли уже устройство в базе
             existing_device = get_device_by_id(device_id)
@@ -218,14 +216,14 @@ async def receive_event(event: Dict[str, Any]):
                 raise HTTPException(status_code=500, detail=f"Ошибка обработки SMS: {str(sms_error)}")
             
         elif event_type == "boot_completed":
-            # Извлекаем данные о сети
-            network_data = event.get('network', {})
-            internet_data = event.get('internet', {})
-            
-            signal_strength_raw = network_data.get('signalStrength', 0)
+            # Извлекаем данные о сети из device (новый формат)
+            signal_strength_raw = device_data.get('signalStrength', 0)
             signal_strength = int((signal_strength_raw / 4) * 100) if signal_strength_raw else 0
-            network_type = network_data.get('networkType', 'Unknown')
-            internet_type = internet_data.get('type', 'Unknown')
+            network_type = device_data.get('networkType', 'Unknown')
+            
+            internet_connected = device_data.get('internetConnected', False)
+            connection_type = device_data.get('connectionType', 'Unknown')
+            internet_type = f"{connection_type}" if internet_connected else 'Disconnected'
             
             # Проверяем, есть ли уже устройство в базе
             existing_device = get_device_by_id(device_id)
