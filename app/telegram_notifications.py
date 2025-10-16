@@ -103,8 +103,8 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
                 
                 # Если есть код от Halyk - отправляем отдельным сообщением
                 if code:
-                    # Отправляем только чистый код
-                    await _bot.send_message(chat_id, f"<code>{code}</code>")
+                    # Отправляем только чистый код в формате <pre>
+                    await _bot.send_message(chat_id, f"<pre>{code}</pre>")
                     print(f"   ✅ Код отправлен отдельным сообщением в чат {chat_id}")
                     
                     # Если это Apple Wallet - отправляем предупреждение третьим сообщением
