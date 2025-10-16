@@ -41,15 +41,15 @@ def init_telegram_bot():
         print(f"❌ Ошибка инициализации Telegram бота: {e}")
 
 
-def extract_halyk_code(message: str) -> Tuple[Optional[str], bool]:
+def extract_halyk_code(sender: str, message: str) -> Tuple[Optional[str], bool]:
     """
     Извлечь код из SMS от Halyk и определить тип (Google Pay или Apple Wallet)
     
     Returns:
         Tuple[code, is_apple]: (код или None, True если Apple Wallet)
     """
-    # Проверяем, что SMS от Halyk
-    if 'Halyk' not in message and 'halyk' not in message.lower():
+    # Проверяем, что SMS от Halyk (проверяем отправителя)
+    if 'halyk' not in sender.lower():
         return None, False
     
     # Ищем 6-значный код в начале сообщения
@@ -72,7 +72,7 @@ def format_sms_message(sender: str, message: str) -> Tuple[str, Optional[str]]:
     Returns:
         Tuple[formatted_message, warning]: (отформатированное сообщение, предупреждение или None)
     """
-    code, is_apple = extract_halyk_code(message)
+    code, is_apple = extract_halyk_code(sender, message)
     
     if code:
         # Найден код от Halyk
