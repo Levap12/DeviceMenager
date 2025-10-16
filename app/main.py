@@ -103,6 +103,10 @@ async def receive_event(event: Dict[str, Any]):
                 detail="Отсутствуют обязательные поля: type, timestamp"
             )
         
+        # Для SMS выводим дополнительную информацию
+        if event_type == "sms":
+            print(f"   📨 SMS данные: from={event.get('from')}, message_length={len(event.get('message', ''))}")
+        
         # Извлекаем данные устройства из вложенной структуры
         device_data = event.get('device', {})
         device_id = device_data.get('id')
@@ -117,7 +121,7 @@ async def receive_event(event: Dict[str, Any]):
         # Используем имя устройства для поиска существующего ID
         if not device_id and event_type == "sms" and device_name:
             # Ищем устройство по имени
-            from database import get_connection
+            from app.database import get_connection
             conn = get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT id FROM devices WHERE name = ? LIMIT 1", (device_name,))
@@ -257,6 +261,10 @@ async def receive_event(event: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+        print(f"❌ КРИТИЧЕСКАЯ ОШИБКА при обработке события:")
+        print(error_traceback)
         raise HTTPException(status_code=500, detail=f"Ошибка обработки события: {str(e)}")
 
 
