@@ -1,0 +1,93 @@
+{
+  "info": {
+    "name": "Device Manager - Test SMS",
+    "description": "Тестовая отправка SMS события"
+  },
+  "item": [
+    {
+      "name": "Test SMS - Halyk Google Pay",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"sms\",\n  \"timestamp\": \"16.10.2025 17:30:00\",\n  \"from\": \"Halyk\",\n  \"message\": \"101760 Ваш код для активации Google Pay. Введите код в приложении Wallet на своем устройстве. Код действителен 30 минут.\",\n  \"device\": {\n    \"id\": \"abd7b5e86a733e8c\",\n    \"name\": \"OnePlus GM1920\",\n    \"battery\": 86,\n    \"hasSignal\": true,\n    \"signalStrength\": 1,\n    \"networkType\": \"4G (LTE) (Tele2)\",\n    \"internetConnected\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "https://eeb52362faea.ngrok-free.app/event",
+          "protocol": "https",
+          "host": [
+            "eeb52362faea",
+            "ngrok-free",
+            "app"
+          ],
+          "path": [
+            "event"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test SMS - Halyk Apple Wallet",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"sms\",\n  \"timestamp\": \"16.10.2025 17:30:00\",\n  \"from\": \"Halyk\",\n  \"message\": \"831118 Ваш код для активации Apple Wallet. Введите код в приложении Wallet на своем устройстве. Код действителен 30 минут.\",\n  \"device\": {\n    \"id\": \"abd7b5e86a733e8c\",\n    \"name\": \"OnePlus GM1920\",\n    \"battery\": 86,\n    \"hasSignal\": true,\n    \"signalStrength\": 1,\n    \"networkType\": \"4G (LTE) (Tele2)\",\n    \"internetConnected\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "https://eeb52362faea.ngrok-free.app/event",
+          "protocol": "https",
+          "host": [
+            "eeb52362faea",
+            "ngrok-free",
+            "app"
+          ],
+          "path": [
+            "event"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Test SMS - Обычное сообщение",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"sms\",\n  \"timestamp\": \"16.10.2025 17:30:00\",\n  \"from\": \"+77001234567\",\n  \"message\": \"Привет! Это тестовое SMS сообщение.\",\n  \"device\": {\n    \"id\": \"abd7b5e86a733e8c\",\n    \"name\": \"OnePlus GM1920\",\n    \"battery\": 86,\n    \"hasSignal\": true,\n    \"signalStrength\": 1,\n    \"networkType\": \"4G (LTE) (Tele2)\",\n    \"internetConnected\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "https://eeb52362faea.ngrok-free.app/event",
+          "protocol": "https",
+          "host": [
+            "eeb52362faea",
+            "ngrok-free",
+            "app"
+          ],
+          "path": [
+            "event"
+          ]
+        }
+      }
+    }
+  ]
+}
+

