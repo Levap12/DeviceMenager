@@ -85,10 +85,10 @@ async def _send_sms_notification_async(device_id: str, sender: str, message: str
         # Проверяем, есть ли код от Halyk
         code, is_apple = extract_halyk_code(sender, message)
         
-        # Форматируем сообщение с кодом в <pre> если это Halyk
+        # Форматируем сообщение с кодом в <code> если это Halyk
         formatted_message = message
         if code:
-            formatted_message = message.replace(code, f'<pre>{code}</pre>', 1)
+            formatted_message = message.replace(code, f'<code>{code}</code>', 1)
         
         # Базовое уведомление
         notification = (
